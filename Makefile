@@ -80,7 +80,7 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c  USI_UART.c softpwm.c
+SRC = $(TARGET).c  USI_UART.c softpwm.c elapsed.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
