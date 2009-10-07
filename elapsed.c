@@ -1,3 +1,7 @@
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "elapsed.h"
+
 /* globals */
 
 volatile long millis;

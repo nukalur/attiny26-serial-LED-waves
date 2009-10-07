@@ -69,11 +69,4 @@ void setPWM(unsigned char channel,unsigned char value) {
 
 }
 
-  ISR(TIMER1_CMPB_vect)
-{
-ticks++;
-if(ticks % 10 == 0) { // 10000 ticks a second / 10 = 1 ms
-  millis++;
-  ticks = 0; // reset tick count
-}
-}
+
