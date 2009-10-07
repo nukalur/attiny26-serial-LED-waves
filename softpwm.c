@@ -31,9 +31,8 @@ void PWMInit(void)
     compbuff[i] = pwm;          // set default PWM values
   }
   OCR1A = 15;	// this is softpwm compare 4bits of something?
-  OCR1B = 100; // this is for timing, with 8mhz cpu, /8 prescale, and OCR1B = 100, interrupt will trigger 10k times a second
-  TIFR = (1 << OCF1A) | (1 << OCF1B);           // clear interrupt flags
-  TIMSK = (1 << OCIE1A) | (1 << OCIE1B) ;         // enable output compare interrupts
+  TIFR |= (1 << OCF1A);           // clear interrupt flags
+  TIMSK |= (1 << OCIE1A)  ;         // enable output compare interrupts
   TCCR1B = (1 << CS12);         // start timer, /8 prescale
   sei();         // enable interrupt
 }
