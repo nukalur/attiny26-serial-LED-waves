@@ -84,17 +84,27 @@ int main(void) {
 				
 			}
 		}
-		if(lastflash + 5 < elapsed()) {
+		
+		if(lastflash + 1000 < elapsed()) {
+		    USI_UART_Transmit_Byte('!');
 			if(flashstate) {
 						setPWM(0,red);
 						setPWM(1,green);
 						setPWM(2,blue);
-						flashstate = !flashstate;
+						flashstate = 0;
+						USI_UART_Transmit_Byte('o');
+						USI_UART_Transmit_Byte('n');
+						USI_UART_Transmit_Byte(0x20);
+						
 			} else {
 						setPWM(0,0x00);
 						setPWM(1,0x00);
 						setPWM(2,0x00);
-						flashstate = !flashstate;
+						USI_UART_Transmit_Byte('o');
+						USI_UART_Transmit_Byte('f');
+						USI_UART_Transmit_Byte('f');
+						USI_UART_Transmit_Byte(0x20);
+						flashstate = 1;
 			}
 		}
 	}
