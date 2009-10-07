@@ -2,6 +2,7 @@
 #include <avr/interrupt.h>  
 #include "util/delay.h" 
 #include "USI_UART.h"
+#include "elapsed.h"
 #include "softpwm.h"
 #include <stdbool.h> 
 
@@ -13,6 +14,7 @@ int rxindex;
 volatile static unsigned char red,blue,green,checksum;
 int main(void) {
 
+	timer1init();
 	PWMInit();
 	USI_UART_Initialise_Transmitter(); 
 	USI_UART_Initialise_Receiver();
