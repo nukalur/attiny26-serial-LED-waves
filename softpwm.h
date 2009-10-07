@@ -18,4 +18,4 @@
 // prototypes
 void PWMInit(void);
 void setPWM(unsigned char,unsigned char);
-long elapsed(void);
+

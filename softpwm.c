@@ -7,8 +7,6 @@
 
 
 //! global buffers
-volatile long millis;
-volatile unsigned char ticks;
 unsigned char compare[CHMAX];
 volatile unsigned char compbuff[CHMAX];
 
@@ -44,9 +42,7 @@ void setPWM(unsigned char channel,unsigned char value) {
 	compbuff[channel] = value;
 }
 
-long elapsed(void) {
-	return millis;
-}
+
 
   ISR(TIMER1_CMPA_vect)
 {
