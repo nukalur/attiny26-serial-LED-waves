@@ -1,13 +1,14 @@
 #include <avr/io.h> 
 #include <avr/interrupt.h>  
-#include "util/delay.h" 
+#include <util/delay.h> 
+#include <stdlib.h>
 #include "USI_UART.h"
 #include "elapsed.h"
 #include "softpwm.h"
 #include <stdbool.h> 
 
 bool flashstate = 1;
-long lastflash;
+unsigned long lastflash;
 
 static unsigned char          mybuffer[UART_RX_BUFFER_SIZE]; 
 int rxindex;
@@ -85,7 +86,10 @@ int main(void) {
 			}
 		}
 		
-		if(lastflash + 1000 < elapsed()) {
+		
+		/*
+		
+		if(lastflash + 1000 > elapsed()) {
 		    USI_UART_Transmit_Byte('!');
 			if(flashstate) {
 						setPWM(0,red);
@@ -106,6 +110,31 @@ int main(void) {
 						USI_UART_Transmit_Byte(0x20);
 						flashstate = 1;
 			}
+		}
+		
+		*/
+		if(lastflash + 1000 < elapsed()) {
+			static char lap[8];
+			ltoa(elapsed(),lap,10);
+			static int lapdex = 0;
+			while(lap[lapdex]) {
+				USI_UART_Transmit_Byte(lap[lapdex]);
+				lapdex++;
+			}
+		
+		  USI_UART_Transmit_Byte(' ');
+		  USI_UART_Transmit_Byte(' ');
+		
+			lapdex = 0;
+			ltoa(lastflash,lap,10);
+			while(lap[lapdex]) {
+				USI_UART_Transmit_Byte(lap[lapdex]);
+				lapdex++;
+			}
+		
+			USI_UART_Transmit_Byte(10);
+			USI_UART_Transmit_Byte(13);
+			lastflash = elapsed();
 		}
 	}
 	return 1;

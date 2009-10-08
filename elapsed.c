@@ -4,8 +4,8 @@
 
 /* globals */
 
-volatile long millis;
-volatile unsigned char ticks;
+volatile unsigned long millis;
+volatile unsigned int ticks;
 
 
 /* init timer and interrupts for ms elapsed counter */
@@ -30,7 +30,7 @@ long elapsed(void) {
 ISR(TIMER1_CMPB_vect)
 {
 	ticks++;
-	if(ticks<10) { // 10000 ticks a second / 10 = 1 ms
+	if(ticks % 10 == 0 ) { // 10000 ticks a second / 10 = 1 ms
   		millis++;
   		ticks = 0; // reset tick count
 	}

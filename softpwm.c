@@ -30,7 +30,7 @@ void PWMInit(void)
     compare[i] = pwm;           // set default PWM values
     compbuff[i] = pwm;          // set default PWM values
   }
-  OCR1A = 15;	// this is softpwm compare 4bits of something?
+  OCR1A = 127;	// this is softpwm compare 4bits of something?
   TIFR |= (1 << OCF1A);           // clear interrupt flags
   TIMSK |= (1 << OCIE1A)  ;         // enable output compare interrupts
   TCCR1B = (1 << CS12);         // start timer, /8 prescale
@@ -46,11 +46,11 @@ void setPWM(unsigned char channel,unsigned char value) {
   ISR(TIMER1_CMPA_vect)
 {
   static unsigned char pinlevelB=PORTB_MASK;
-  static unsigned char softcount=0xFF;
+  static unsigned char softcount=0x15;
 
   PORTB = pinlevelB;            // update outputs
   
-  if(++softcount == 0){         // increment modulo 256 counter and update
+  if(++softcount > 16){         // increment modulo 256 counter and update
                                 // the compare values only when counter = 0.
     compare[0] = compbuff[0];   // verbose code for speed
     compare[1] = compbuff[1];
@@ -59,7 +59,7 @@ void setPWM(unsigned char channel,unsigned char value) {
    // last element should equal CHMAX - 1
 
     pinlevelB = PORTB_MASK;     // set all port pins high
-  
+    softcount = 0;	  
   }
   // clear port pin on compare match (executed on next interrupt)
   if(compare[0] == softcount) R0_CLEAR;
