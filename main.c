@@ -91,11 +91,11 @@ int main(void) {
 		
 		if(lastred + 500 > elapsed()) { 
 				static int wavei = 0;
-				if(wavei<32) {
-					setPWM(0,map(wavei,0,32,0,red));
+				if(wavei<128) {
+					setPWM(0,map(wavei,0,128,0,red));
 					wavei++;
-				} else if (wavei>31 && wavei<64) {
-					setPWM(0,map(64-wavei,0,32,0,red));
+				} else if (wavei>127 && wavei<256) {
+					setPWM(0,map(256-wavei,0,128,0,red));
 					wavei++;
 				} else {
 					wavei=0;
@@ -105,11 +105,11 @@ int main(void) {
 
 		if(lastgreen + 750 > elapsed()) { 
 				static int wavei = 0;
-				if(wavei<32) {
-					setPWM(1,map(wavei,0,32,0,green));
+				if(wavei<64) {
+					setPWM(1,map(wavei,0,64,0,green));
 					wavei++;
-				} else if (wavei>31 && wavei<64) {
-					setPWM(1,map(64-wavei,0,32,0,green));
+				} else if (wavei>63 && wavei<128) {
+					setPWM(1,map(128-wavei,0,64,0,green));
 					wavei++;
 				} else {
 					wavei=0;
