@@ -48,10 +48,7 @@
     #error RX buffer size is not a power of 2
 #endif
 
-#define UART_TX_BUFFER_MASK ( UART_TX_BUFFER_SIZE - 1 )
-#if ( UART_TX_BUFFER_SIZE & UART_TX_BUFFER_MASK )
-    #error TX buffer size is not a power of 2
-#endif
+
 
 /* General defines */
 #define TRUE                      1
@@ -59,27 +56,17 @@
 
 //********** Static Variables **********//
 
-/* IAR way
-__no_init __regvar static unsigned char USI_UART_TxData @ 15;   // Tells the compiler to store the byte to be transmitted in registry.
-*/
-//register unsigned char USI_UART_TxData asm("r15"); // gcc way
-volatile static unsigned char USI_UART_TxData;
-
 
 static unsigned char          UART_RxBuf[UART_RX_BUFFER_SIZE];  // UART buffers. Size is definable in the header file.
 static volatile unsigned char UART_RxHead;
 static volatile unsigned char UART_RxTail;
-static unsigned char          UART_TxBuf[UART_TX_BUFFER_SIZE];
-static volatile unsigned char UART_TxHead;
-static volatile unsigned char UART_TxTail;
+
 
 static volatile union USI_UART_status                           // Status byte holding flags.
 {
     unsigned char status;
     struct
     {
-        unsigned char ongoing_Transmission_From_Buffer:1;
-        unsigned char ongoing_Transmission_Of_Package:1;
         unsigned char ongoing_Reception_Of_Package:1;
         unsigned char reception_Buffer_Overflow:1;
         unsigned char flag4:1;
@@ -107,33 +94,9 @@ void USI_UART_Flush_Buffers( void )
 {  
     UART_RxTail = 0;
     UART_RxHead = 0;
-    UART_TxTail = 0;
-    UART_TxHead = 0;
+
 }
 
-// Initialise USI for UART transmission.
-void USI_UART_Initialise_Transmitter( void )                              
-{
-    cli();
-    TCNT0  = 0x00;
-    TCCR0  = (1<<PSR0)|(0<<CS02)|(1<<CS01)|(0<<CS00);         // Reset the prescaler and start Timer0.
-    TIFR   = (1<<TOV0);                                       // Clear Timer0 OVF interrupt flag.
-    TIMSK |= (1<<TOIE0);                                      // Enable Timer0 OVF interrupt.
-                                                                
-    USICR  = (0<<USISIE)|(1<<USIOIE)|                         // Enable USI Counter OVF interrupt.
-             (0<<USIWM1)|(1<<USIWM0)|                         // Select Three Wire mode.
-             (0<<USICS1)|(1<<USICS0)|(0<<USICLK)|             // Select Timer0 OVER as USI Clock source.
-             (0<<USITC);                                           
-             
-    USIDR  = 0xFF;                                            // Make sure MSB is '1' before enabling USI_DO.
-    USISR  = 0xF0 |                                           // Clear all USI interrupt flags.
-             0x0F;                                            // Preload the USI counter to generate interrupt at first USI clock.
-    DDRB  |= (1<<PB1);                                        // Configure USI_DO as output.
-                  
-    USI_UART_status.ongoing_Transmission_From_Buffer = TRUE;
-                  
-    sei();
-}
 
 // Initialise USI for UART reception.
 // Note that this function only enables pinchange interrupt on the USI Data Input pin.
@@ -147,23 +110,6 @@ void USI_UART_Initialise_Receiver( void )
     GIMSK |=  (1<<PCIE0);                                   // Enable pin change interrupt for PB3:0.
 }
 
-// Puts data in the transmission buffer, after reverseing the bits in the byte.
-// Initiates the transmission rutines if not already started.
-void USI_UART_Transmit_Byte( unsigned char data )          
-{
-    unsigned char tmphead;
-
-    tmphead = ( UART_TxHead + 1 ) & UART_TX_BUFFER_MASK;        // Calculate buffer index.
-    while ( tmphead == UART_TxTail );                           // Wait for free space in buffer.
-    UART_TxBuf[tmphead] = Bit_Reverse(data);                    // Reverse the order of the bits in the data byte and store data in buffer.
-    UART_TxHead = tmphead;                                      // Store new index.
-    
-    if ( !USI_UART_status.ongoing_Transmission_From_Buffer )    // Start transmission from buffer (if not already started).
-    {
-        while ( USI_UART_status.ongoing_Reception_Of_Package ); // Wait for USI to finsh reading incoming data.
-        USI_UART_Initialise_Transmitter();              
-    }
-}
 
 // Returns a byte from the receive buffer. Waits if buffer is empty.
 unsigned char USI_UART_Receive_Byte( void )                
@@ -214,54 +160,9 @@ ISR(IO_PINS_vect)
 // The interrupt is used for both transmission and reception.
 ISR(USI_OVF_vect)                              
 {
-    unsigned char tmphead,tmptail;
-    
-    // Check if we are running in Transmit mode.
-    if( USI_UART_status.ongoing_Transmission_From_Buffer )      
-    {
-        // If ongoing transmission, then send second half of transmit data.
-        if( USI_UART_status.ongoing_Transmission_Of_Package )   
-        {                                   
-            USI_UART_status.ongoing_Transmission_Of_Package = FALSE;    // Clear on-going package transmission flag.
-            
-            USISR = 0xF0 | (USI_COUNTER_SEED_TRANSMIT);                 // Load USI Counter seed and clear all USI flags.
-            USIDR = (USI_UART_TxData << 3) | 0x07;                      // Reload the USIDR with the rest of the data and a stop-bit.
-        }
-        // Else start sendinbg more data or leave transmit mode.
-        else
-        {
-            // If there is data in the transmit buffer, then send first half of data.
-            if ( UART_TxHead != UART_TxTail )                           
-            {
-                USI_UART_status.ongoing_Transmission_Of_Package = TRUE; // Set on-going package transmission flag.
-                
-                tmptail = ( UART_TxTail + 1 ) & UART_TX_BUFFER_MASK;    // Calculate buffer index.
-                UART_TxTail = tmptail;                                  // Store new index.            
-                USI_UART_TxData = UART_TxBuf[tmptail];                  // Read out the data that is to be sent. Note that the data must be bit reversed before sent.
-                                                                        // The bit reversing is moved to the application section to save time within the interrupt.
-                USISR  = 0xF0 | (USI_COUNTER_SEED_TRANSMIT);            // Load USI Counter seed and clear all USI flags.
-                USIDR  = (USI_UART_TxData >> 2) | 0x80;                 // Copy (initial high state,) start-bit and 6 LSB of original data (6 MSB
-                                                                        //  of bit of bit reversed data).                
-            }
-            // Else enter receive mode.
-            else
-            {
-                USI_UART_status.ongoing_Transmission_From_Buffer = FALSE; 
-                
-                TCCR0  = (0<<CS02)|(0<<CS01)|(0<<CS00);                 // Stop Timer0.
-                PORTB |=   (1<<PB3)|(1<<PB2)|(1<<PB1)|(1<<PB0);         // Enable pull up on USI DO, DI and SCK pins. (And PB3 because of pin change interrupt)   
-                DDRB  &= ~((1<<PB3)|(1<<PB2)|(1<<PB1)|(1<<PB0));        // Set USI DI, DO and SCK pins as inputs.  
-                USICR  =  0;                                            // Disable USI.
-                GIFR   =  (1<<PCIF);                                    // Clear pin change interrupt flag.
-                GIMSK |=  (1<<PCIE0);                                   // Enable pin change interrupt for PB3:0.
-            }
-        }
-    }
-    
-    // Else running in receive mode.
-    else                                                                
-    {              
-        USI_UART_status.ongoing_Reception_Of_Package = FALSE;           
+    unsigned char tmphead;
+  
+    USI_UART_status.ongoing_Reception_Of_Package = FALSE;           
 
         tmphead     = ( UART_RxHead + 1 ) & UART_RX_BUFFER_MASK;        // Calculate buffer index.
         
@@ -281,7 +182,6 @@ ISR(USI_OVF_vect)
         USICR  =  0;                                            // Disable USI.
         GIFR   =  (1<<PCIF);                                    // Clear pin change interrupt flag.
         GIMSK |=  (1<<PCIE0);                                   // Enable pin change interrupt for PB3:0.
-    }
     
 }
 

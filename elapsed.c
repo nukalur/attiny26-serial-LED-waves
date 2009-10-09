@@ -14,7 +14,7 @@ void timer1init(void) {
   OCR1B = 100;                    // this is for timing, with 8mhz cpu, /8 prescale, and OCR1B = 100, interrupt will trigger 10k times a second
   TIFR |= (1 << OCF1B);           // clear interrupt flags
   TIMSK |= (1 << OCIE1B);         // enable output compare interrupts
-  TCCR1B = (1 << CS12);           // start timer, /8 prescale
+  TCCR1B = (0 << CS13) | (1 << CS12) | (0 << CS11) | (0 << CS10);           // start timer, /8 prescale
   sei(); 			  //enable interrupts
 }
 
